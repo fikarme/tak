@@ -230,6 +230,7 @@
         const PIECE_TYPES = { FLAT: 'flat', WALL: 'wall', CAPSTONE: 'capstone' };
         const INITIAL_STONES = 21;
         const INITIAL_CAPSTONES = 1;
+        const DIRECTIONS = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // Cached directions for reuse
         // GÜNCELLEME: Yapay zeka için pozisyon ağırlıkları
         const positionalWeights = [
             [1, 2, 2, 2, 1],
@@ -554,8 +555,7 @@
             if (!stack || stack.length === 0) return;
 
             const numToPickup = Math.min(stack.length, handLimit);
-            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-            directions.forEach(([dr, dc]) => {
+            DIRECTIONS.forEach(([dr, dc]) => {
                 for (let i = 1; i <= numToPickup; i++) {
                     const newR = r + i * dr;
                     const newC = c + i * dc;
@@ -822,7 +822,7 @@
                          const stack = board[r][c];
                          if (stack.length > 0 && stack[stack.length - 1].player === player) {
                              const numToPickup = Math.min(stack.length, BOARD_SIZE);
-                             [[ -1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dr, dc]) => {
+                             DIRECTIONS.forEach(([dr, dc]) => {
                                  for(let i=1; i <= numToPickup; i++){
                                      const newR = r + i * dr, newC = c + i * dc;
                                      if(newR >= 0 && newR < BOARD_SIZE && newC >=0 && newC < BOARD_SIZE) {
