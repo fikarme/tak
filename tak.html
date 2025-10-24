@@ -231,6 +231,7 @@
         const INITIAL_STONES = 21;
         const INITIAL_CAPSTONES = 1;
         const DIRECTIONS = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // Cached directions for reuse
+        const WIN_THREAT_THRESHOLD = 20; // Threshold for detecting player win threat
         // GÜNCELLEME: Yapay zeka için pozisyon ağırlıkları
         const positionalWeights = [
             [1, 2, 2, 2, 1],
@@ -701,10 +702,10 @@
         function checkPlayerWinThreat() {
             // Check if player can win in next move by creating a path
             const roadPotential = calculateRoadPotential(PLAYER1);
-            return roadPotential > 20; // High potential means close to winning
+            return roadPotential > WIN_THREAT_THRESHOLD ? roadPotential : 0;
         }
         
-        function findBlockingMove(moves, threat) {
+        function findBlockingMove(moves, currentThreat) {
             // Try to find a move that blocks the player's path
             for (const move of moves) {
                 if (move.type === 'place' && move.pieceType === PIECE_TYPES.WALL) {
@@ -715,7 +716,7 @@
                     board = tempBoard;
                     const newPotential = calculateRoadPotential(PLAYER1);
                     board = originalBoard;
-                    if (newPotential < threat) {
+                    if (newPotential < currentThreat) {
                         return move; // This move reduces player's road potential
                     }
                 }
