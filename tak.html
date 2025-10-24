@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tak Oyunu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 0;
+            aspect-ratio: 1 / 1;
+            padding: 20px;
+            background-color: #c2a26e;
+            border: 4px solid #6b4e2a;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .square {
+            background-color: transparent;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .square::before, .square::after {
+            content: '';
+            position: absolute;
+            background-color: #9c7b4f;
+            z-index: 1;
+        }
+        .square::before { /* Dikey çizgi */
+            width: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            top: -50%;
+            bottom: -50%;
+        }
+        .square::after { /* Yatay çizgi */
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            left: -50%;
+            right: -50%;
+        }
+        
+        /* GÜNCELLEME: Kenar bölgeleri */
+        .edge-square {
+             background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .click-target {
+            position: absolute;
+            width: 90%;
+            height: 90%;
+            border-radius: 50%;
+            transition: all 0.15s ease-out;
+            z-index: 2;
+        }
+        .square:hover > .click-target {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .square.legal-move > .click-target {
+            background-color: rgba(167, 243, 208, 0.8);
+            transform: scale(1.05);
+        }
+        .square.selected > .click-target {
+            background-color: rgba(253, 224, 71, 0.8);
+            transform: scale(1.05);
+            box-shadow: 0 0 10px #f59e0b;
+        }
+        
+        .stack {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease-in-out;
+            z-index: 3;
+        }
+        .piece {
+            position: absolute;
+            width: 75%;
+            height: 75%;
+            top: 12.5%;
+            left: 12.5%;
+            border-radius: 50%;
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 2px 3px rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        }
+        .piece.player1 { background-color: #ffffff; border: 2px solid #ccc; }
+        .piece.player2 { background-color: #2d3748; border: 2px solid #1a202c; }
+        .piece.wall {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.2);
+        }
+        .piece.capstone {
+            border-radius: 6px;
+            transform: rotate(45deg);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.3);
+            font-size: 1.5em;
+            color: #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+         .piece.capstone span {
+            transform: rotate(-45deg);
+        }
+        .piece-count-indicator {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .player1 .piece-count-indicator { background-color: #ffffff; }
+        .player2 .piece-count-indicator { background-color: #2d3748; }
+
+        .stack .piece:nth-child(1) { transform: translateY(0); }
+        .stack .piece:nth-child(2) { transform: translateY(-5px); }
+        .stack .piece:nth-child(3) { transform: translateY(-10px); }
+        .stack .piece:nth-child(4) { transform: translateY(-15px); }
+        .stack .piece:nth-child(5) { transform: translateY(-20px); }
+
+        /* GÜNCELLEME: Kazanma animasyonu */
+        .winning-path > .click-target {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0% { background-color: rgba(253, 224, 71, 0.8); transform: scale(1.05); }
+            50% { background-color: rgba(250, 204, 21, 1); transform: scale(1.15); box-shadow: 0 0 20px #f59e0b; }
+            100% { background-color: rgba(253, 224, 71, 0.8); transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+        <h1 class="text-4xl font-bold text-center mb-2 text-gray-800 dark:text-white">Tak Oyunu</h1>
+        <p class="text-center text-gray-600 dark:text-gray-400 mb-4">Rakibin (Siyah) bir yol yapmasını engelle ve kendi yolunu (Beyaz) oluştur.</p>
+
+        <div id="game-status" class="text-center text-xl font-semibold mb-4 h-8 transition-colors duration-300"></div>
+
+        <div class="flex justify-between items-center mb-4 px-2">
+            <!-- Oyuncu 1 (Siz) -->
+            <div class="flex flex-col items-center p-3 rounded-lg bg-white dark:bg-gray-800 shadow-md">
+                <h3 class="font-bold text-lg">Siz (Beyaz)</h3>
+                <div class="flex items-center gap-4 mt-2">
+                    <div class="flex items-center gap-2">
+                        <div class="piece-count-indicator player1"></div>
+                        <span id="player1-stones" class="font-mono text-lg">21</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                         <div class="piece-count-indicator player1 capstone"><span>★</span></div>
+                        <span id="player1-capstones" class="font-mono text-lg">1</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Oyuncu 2 (Yapay Zeka) -->
+            <div class="flex flex-col items-center p-3 rounded-lg bg-white dark:bg-gray-800 shadow-md">
+                <h3 class="font-bold text-lg">Yapay Zeka (Siyah)</h3>
+                 <div class="flex items-center gap-4 mt-2">
+                    <div class="flex items-center gap-2">
+                        <div class="piece-count-indicator player2"></div>
+                        <span id="player2-stones" class="font-mono text-lg">21</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                         <div class="piece-count-indicator player2 capstone"><span>★</span></div>
+                        <span id="player2-capstones" class="font-mono text-lg">1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="board" class="board-grid w-full max-w-lg mx-auto mb-4"></div>
+
+        <div id="action-panel" class="text-center mb-4 h-12">
+            <!-- Yerleştirme butonları dinamik olarak buraya eklenecek -->
+        </div>
+
+        <button id="reset-button" class="w-full max-w-lg mx-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+            Yeni Oyun Başlat
+        </button>
+    </div>
+
+    <script>
+        // Oyun sabitleri
+        const BOARD_SIZE = 5;
+        const PLAYER1 = 1; // Siz (Beyaz)
+        const PLAYER2 = 2; // Yapay Zeka (Siyah)
+        const PIECE_TYPES = { FLAT: 'flat', WALL: 'wall', CAPSTONE: 'capstone' };
+        const INITIAL_STONES = 21;
+        const INITIAL_CAPSTONES = 1;
+        // GÜNCELLEME: Yapay zeka için pozisyon ağırlıkları
+        const positionalWeights = [
+            [1, 2, 2, 2, 1],
+            [2, 3, 4, 3, 2],
+            [2, 4, 5, 4, 2],
+            [2, 3, 4, 3, 2],
+            [1, 2, 2, 2, 1]
+        ];
+
+        // Oyun durumu değişkenleri
+        let board;
+        let currentPlayer;
+        let turnCount;
+        let playerStones;
+        let playerCapstones;
+        let selectedSquare = null;
+        let gameOver = false;
+
+        // DOM elementleri
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('game-status');
+        const actionPanelElement = document.getElementById('action-panel');
+        const resetButton = document.getElementById('reset-button');
+        
+        function initGame() {
+            board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null).map(() => []));
+            turnCount = 0;
+            currentPlayer = PLAYER1; 
+            gameOver = false;
+            selectedSquare = null;
+            playerStones = { [PLAYER1]: INITIAL_STONES, [PLAYER2]: INITIAL_STONES };
+            playerCapstones = { [PLAYER1]: INITIAL_CAPSTONES, [PLAYER2]: INITIAL_CAPSTONES };
+            renderBoard();
+            updatePieceCounts();
+            statusElement.textContent = "Başlamak için rakibin (Siyah) taşını bir kareye yerleştirin.";
+        }
+        
+        function placeInitialStone(player) {
+            let placed = false;
+            while(!placed) {
+                const r = Math.floor(Math.random() * BOARD_SIZE);
+                const c = Math.floor(Math.random() * BOARD_SIZE);
+                if (board[r][c].length === 0) {
+                     board[r][c].push({ player: player, type: PIECE_TYPES.FLAT });
+                     placed = true;
+                }
+            }
+        }
+        
+        function makeAIInitialPlacement() {
+            placeInitialStone(PLAYER1);
+            turnCount++;
+            currentPlayer = PLAYER1; 
+            updateUI();
+            statusElement.textContent = "Oyun başladı. Sıra Sizde (Beyaz)";
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const square = document.createElement('div');
+                    square.className = 'square';
+                    square.dataset.r = r;
+                    square.dataset.c = c;
+                    
+                    // GÜNCELLEME: Kenar bölgeleri için sınıf ekleme
+                    if (r === 0 || r === BOARD_SIZE - 1 || c === 0 || c === BOARD_SIZE - 1) {
+                        square.classList.add('edge-square');
+                    }
+
+                    const clickTarget = document.createElement('div');
+                    clickTarget.className = 'click-target';
+                    square.appendChild(clickTarget);
+
+                    const stack = board[r][c];
+                    if (stack.length > 0) {
+                        const stackElement = document.createElement('div');
+                        stackElement.className = 'stack';
+                        stack.forEach((piece) => {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `piece player${piece.player} ${piece.type}`;
+                             if(piece.type === PIECE_TYPES.CAPSTONE){
+                                pieceElement.innerHTML = '<span>★</span>';
+                            }
+                            stackElement.appendChild(pieceElement);
+                        });
+                        square.appendChild(stackElement);
+                    }
+                    square.addEventListener('click', () => handleSquareClick(r, c));
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+
+        function updateUI() {
+            renderBoard();
+            updatePieceCounts();
+            updateStatus();
+        }
+
+        function updatePieceCounts() {
+            document.getElementById('player1-stones').textContent = playerStones[PLAYER1];
+            document.getElementById('player1-capstones').textContent = playerCapstones[PLAYER1];
+            document.getElementById('player2-stones').textContent = playerStones[PLAYER2];
+            document.getElementById('player2-capstones').textContent = playerCapstones[PLAYER2];
+        }
+
+        function updateStatus() {
+            if (gameOver) return;
+            statusElement.textContent = currentPlayer === PLAYER1 ? "Sıra Sizde (Beyaz)" : "Yapay Zeka (Siyah) Düşünüyor...";
+        }
+
+        function handleSquareClick(r, c) {
+            if (gameOver || currentPlayer !== PLAYER1) return;
+
+            if (turnCount === 0) {
+                if (board[r][c].length === 0) {
+                    board[r][c].push({ player: PLAYER2, type: PIECE_TYPES.FLAT });
+                    turnCount++;
+                    currentPlayer = PLAYER2;
+                    updateUI();
+                    statusElement.textContent = "Yapay Zeka kendi başlangıç taşınızı yerleştiriyor...";
+                    setTimeout(makeAIInitialPlacement, 1000);
+                } else {
+                    statusElement.textContent = "Boş bir kareye yerleştirin.";
+                }
+                return;
+            }
+            
+            const stack = board[r][c];
+            const topPiece = stack.length > 0 ? stack[stack.length - 1] : null;
+
+            if (selectedSquare) {
+                const { r: fromR, c: fromC } = selectedSquare;
+                if (document.querySelector(`[data-r='${r}'][data-c='${c}']`).classList.contains('legal-move')) {
+                    showMoveOptions(fromR, fromC, r, c);
+                } else {
+                    clearHighlights();
+                    selectedSquare = null;
+                    hideActionPanel();
+                }
+            } else {
+                if (topPiece && topPiece.player === currentPlayer) {
+                    selectedSquare = { r, c };
+                    highlightLegalMoves(r, c);
+                } else if (!topPiece) {
+                     showPlaceOptions(r, c);
+                }
+            }
+        }
+        
+        function showPlaceOptions(r, c) {
+            hideActionPanel();
+            const canPlaceStone = playerStones[currentPlayer] > 0;
+            const canPlaceCapstone = playerCapstones[currentPlayer] > 0;
+
+            if(canPlaceStone) {
+                const flatBtn = document.createElement('button');
+                flatBtn.textContent = 'Düz Taş Yerleştir';
+                flatBtn.className = "bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg mr-2 transition";
+                flatBtn.onclick = () => placePiece(r, c, PIECE_TYPES.FLAT);
+                actionPanelElement.appendChild(flatBtn);
+
+                const wallBtn = document.createElement('button');
+                wallBtn.textContent = 'Duvar Yerleştir';
+                wallBtn.className = "bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg mr-2 transition";
+                wallBtn.onclick = () => placePiece(r, c, PIECE_TYPES.WALL);
+                actionPanelElement.appendChild(wallBtn);
+            }
+
+            if (canPlaceCapstone) {
+                 const capstoneBtn = document.createElement('button');
+                capstoneBtn.textContent = 'Ana Taş Yerleştir';
+                capstoneBtn.className = "bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg mr-2 transition";
+                capstoneBtn.onclick = () => placePiece(r, c, PIECE_TYPES.CAPSTONE);
+                actionPanelElement.appendChild(capstoneBtn);
+            }
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'İptal';
+            cancelBtn.className = "bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition";
+            cancelBtn.onclick = () => hideActionPanel();
+            actionPanelElement.appendChild(cancelBtn);
+        }
+
+        function showMoveOptions(fromR, fromC, toR, toC) {
+             hideActionPanel();
+             const stackToMove = board[fromR][fromC];
+             const handLimit = BOARD_SIZE;
+             const numToPickup = Math.min(stackToMove.length, handLimit);
+             const dist = Math.abs(fromR - toR) + Math.abs(fromC - toC);
+
+            for (let i = dist; i <= numToPickup; i++) {
+                const moveBtn = document.createElement('button');
+                moveBtn.textContent = `${i} taş taşı`;
+                moveBtn.className = "bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg mr-2 transition";
+                moveBtn.onclick = () => moveStack(fromR, fromC, toR, toC, i);
+                actionPanelElement.appendChild(moveBtn);
+            }
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'İptal';
+            cancelBtn.className = "bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition";
+            cancelBtn.onclick = () => {
+                hideActionPanel();
+                clearHighlights();
+                selectedSquare = null;
+            };
+            actionPanelElement.appendChild(cancelBtn);
+        }
+
+        function hideActionPanel() {
+            actionPanelElement.innerHTML = '';
+        }
+
+        function placePiece(r, c, type) {
+            if (board[r][c].length > 0) return;
+
+            if (type === PIECE_TYPES.CAPSTONE) {
+                if (playerCapstones[currentPlayer] > 0) playerCapstones[currentPlayer]--;
+                else return;
+            } else {
+                 if (playerStones[currentPlayer] > 0) playerStones[currentPlayer]--;
+                 else return;
+            }
+
+            board[r][c].push({ player: currentPlayer, type });
+            endTurn();
+        }
+
+        function moveStack(fromR, fromC, toR, toC, numPieces) {
+            const movingStack = board[fromR][fromC].splice(board[fromR][fromC].length - numPieces);
+            const dirR = Math.sign(toR - fromR);
+            const dirC = Math.sign(toC - fromC);
+            let currR = fromR;
+            let currC = fromC;
+            const dist = Math.abs(toR - fromR) + Math.abs(toC - fromC);
+
+            for (let i = 1; i < dist; i++) {
+                currR += dirR;
+                currC += dirC;
+                const pieceToDrop = movingStack.shift();
+                if (pieceToDrop) board[currR][currC].push(pieceToDrop);
+            }
+            
+            if (movingStack.length > 0) {
+                currR += dirR;
+                currC += dirC;
+                const targetStack = board[currR][currC];
+                const topOfTarget = targetStack.length > 0 ? targetStack[targetStack.length - 1] : null;
+                const crushingPiece = movingStack[movingStack.length - 1]; 
+                if (crushingPiece && crushingPiece.type === PIECE_TYPES.CAPSTONE && topOfTarget && topOfTarget.type === PIECE_TYPES.WALL) {
+                    topOfTarget.type = PIECE_TYPES.FLAT;
+                }
+                board[currR][currC].push(...movingStack);
+            }
+            endTurn();
+        }
+        
+        // GÜNCELLEME: Kazanma anı görselleştirmesi için düzenlendi
+        function endTurn() {
+            turnCount++;
+            clearHighlights();
+            selectedSquare = null;
+            hideActionPanel();
+            
+            const winningPath = checkForWin(currentPlayer);
+            
+            updateUI(); // Hamleyi önce göster
+
+            if (winningPath) {
+                handleWin(currentPlayer, "Yol yaparak", winningPath);
+                return;
+            }
+
+            if (isBoardFull() || (playerStones[PLAYER1] === 0 && playerCapstones[PLAYER1] === 0) || (playerStones[PLAYER2] === 0 && playerCapstones[PLAYER2] === 0)) {
+                 handleFlatWin();
+                 return;
+            }
+            
+            currentPlayer = (currentPlayer === PLAYER1) ? PLAYER2 : PLAYER1;
+            updateStatus();
+
+            if (currentPlayer === PLAYER2 && !gameOver) {
+                setTimeout(makeAIMove, 500);
+            }
+        }
+        
+        function isLegalMove(fromR, fromC, toR, toC) {
+            if (fromR === toR && fromC === toC) return false;
+            if (fromR !== toR && fromC !== toC) return false; 
+            
+            const targetStack = board[toR][toC];
+            const topOfTarget = targetStack.length > 0 ? targetStack[targetStack.length-1] : null;
+            const movingStack = board[fromR][fromC];
+            const movingPiece = movingStack[movingStack.length-1];
+
+            if(topOfTarget && topOfTarget.type === PIECE_TYPES.WALL && movingPiece.type !== PIECE_TYPES.CAPSTONE) return false;
+            if(topOfTarget && topOfTarget.type === PIECE_TYPES.CAPSTONE) return false;
+
+            const dirR = Math.sign(toR - fromR);
+            const dirC = Math.sign(toC - fromC);
+            let r = fromR + dirR;
+            let c = fromC + dirC;
+            const dist = Math.abs(fromR-toR) + Math.abs(fromC-toC);
+            for(let i=1; i < dist; i++){
+                const intermediateStack = board[r][c];
+                const topIntermediate = intermediateStack.length > 0 ? intermediateStack[intermediateStack.length-1] : null;
+                if(topIntermediate && (topIntermediate.type === PIECE_TYPES.WALL || topIntermediate.type === PIECE_TYPES.CAPSTONE)) return false;
+                r += dirR;
+                c += dirC;
+            }
+            return true;
+        }
+
+        function highlightLegalMoves(r, c) {
+            clearHighlights();
+            document.querySelector(`[data-r='${r}'][data-c='${c}']`).classList.add('selected');
+            const handLimit = BOARD_SIZE;
+            const stack = board[r][c];
+            if (!stack || stack.length === 0) return;
+
+            const numToPickup = Math.min(stack.length, handLimit);
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            directions.forEach(([dr, dc]) => {
+                for (let i = 1; i <= numToPickup; i++) {
+                    const newR = r + i * dr;
+                    const newC = c + i * dc;
+                    if (newR >= 0 && newR < BOARD_SIZE && newC >= 0 && newC < BOARD_SIZE) {
+                         if (isLegalMove(r, c, newR, newC)) {
+                             document.querySelector(`[data-r='${newR}'][data-c='${newC}']`).classList.add('legal-move');
+                         } else { break; }
+                    } else { break; }
+                }
+            });
+        }
+        
+        function clearHighlights() {
+            document.querySelectorAll('.square').forEach(s => {
+                s.classList.remove('selected', 'legal-move', 'winning-path');
+            });
+        }
+
+        // GÜNCELLEME: Kazanma yolu için düzenlendi
+        function checkForWin(player) {
+            const visited = new Set();
+            let path = [];
+            
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                if (isRoadPiece(r, 0, player)) {
+                    path = [];
+                    if (dfs(r, 0, player, 'horizontal', visited, path)) return path;
+                }
+            }
+            
+            visited.clear();
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                 if (isRoadPiece(0, c, player)) {
+                    path = [];
+                    if (dfs(0, c, player, 'vertical', visited, path)) return path;
+                }
+            }
+            return null;
+        }
+
+        function dfs(r, c, player, direction, visited, path) {
+            const key = `${r},${c}`;
+            if (visited.has(key)) return false;
+            
+            visited.add(key);
+            path.push({r, c});
+
+            if (direction === 'horizontal' && c === BOARD_SIZE - 1) return true;
+            if (direction === 'vertical' && r === BOARD_SIZE - 1) return true;
+
+            const neighbors = [[r-1, c], [r+1, c], [r, c-1], [r, c+1]];
+            for (const [nr, nc] of neighbors) {
+                if(nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && isRoadPiece(nr, nc, player)){
+                    if(dfs(nr, nc, player, direction, visited, path)) return true;
+                }
+            }
+            path.pop(); // Backtrack
+            return false;
+        }
+
+        function isRoadPiece(r, c, player) {
+            const stack = board[r][c];
+            if (stack.length === 0) return false;
+            const topPiece = stack[stack.length - 1];
+            return topPiece.player === player && (topPiece.type === PIECE_TYPES.FLAT || topPiece.type === PIECE_TYPES.CAPSTONE);
+        }
+
+        function isBoardFull() {
+            return board.every(row => row.every(stack => stack.length > 0));
+        }
+
+        function handleFlatWin() {
+            let p1Flats = 0, p2Flats = 0;
+            board.forEach(row => row.forEach(stack => {
+                if (stack.length > 0) {
+                    const topPiece = stack[stack.length - 1];
+                    if (topPiece.type === PIECE_TYPES.FLAT) {
+                        if (topPiece.player === PLAYER1) p1Flats++;
+                        else p2Flats++;
+                    }
+                }
+            }));
+            if (p1Flats > p2Flats) handleWin(PLAYER1, "Düz taş üstünlüğü ile");
+            else if (p2Flats > p1Flats) handleWin(PLAYER2, "Düz taş üstünlüğü ile");
+            else handleWin(0, "Berabere!");
+        }
+
+        // GÜNCELLEME: Kazanma yolu parametresi eklendi
+        function handleWin(player, reason = "Yol yaparak", winningPath = null) {
+            gameOver = true;
+            hideActionPanel();
+            
+            if (winningPath) {
+                winningPath.forEach(({r, c}) => {
+                    document.querySelector(`[data-r='${r}'][data-c='${c}']`).classList.add('winning-path');
+                });
+            }
+
+            setTimeout(() => {
+                let winnerText;
+                if (player === PLAYER1) winnerText = `Tebrikler, Kazandınız!`;
+                else if (player === PLAYER2) winnerText = `Yapay Zeka Kazandı!`;
+                else winnerText = "Oyun Bitti!";
+                statusElement.textContent = `${winnerText} (${reason})`;
+            }, winningPath ? 1500 : 100);
+        }
+        
+        function makeAIMove() {
+            if (gameOver) return;
+            const moves = getAllPossibleMoves(PLAYER2);
+            if (moves.length === 0) {
+                handleWin(PLAYER1, "Rakibin hamlesi kalmadı");
+                return;
+            }
+
+            let bestMove = null;
+            let bestScore = -Infinity;
+            for (const move of moves) {
+                const score = evaluateMove(move);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = move;
+                }
+            }
+
+            if(bestMove.type === 'place') {
+                 placePiece(bestMove.r, bestMove.c, bestMove.pieceType);
+            } else {
+                 moveStack(bestMove.fromR, bestMove.fromC, bestMove.toR, bestMove.toC, bestMove.count);
+            }
+        }
+
+        // GÜNCELLEME: Daha akıllı yapay zeka değerlendirmesi
+        function evaluateMove(move) {
+            let score = 0;
+            const tempBoard = JSON.parse(JSON.stringify(board));
+            
+            let wallFlattened = false;
+
+            if (move.type === 'place') {
+                 tempBoard[move.r][move.c].push({ player: move.player, type: move.pieceType });
+            } else if (move.type === 'move') {
+                const movingStack = tempBoard[move.fromR][move.fromC].splice(tempBoard[move.fromR][move.fromC].length - move.count);
+                const dirR = Math.sign(move.toR - move.fromR), dirC = Math.sign(move.toC - move.fromC);
+                let currR = move.fromR, currC = move.fromC;
+                const dist = Math.abs(move.toR - move.fromR) + Math.abs(move.toC - move.fromC);
+
+                for (let i = 1; i < dist; i++) {
+                    currR += dirR; currC += dirC;
+                    const pieceToDrop = movingStack.shift();
+                    if(pieceToDrop) tempBoard[currR][currC].push(pieceToDrop);
+                }
+                
+                if (movingStack.length > 0) {
+                    currR += dirR; currC += dirC;
+                    const targetStack = tempBoard[currR][currC];
+                    const topOfTarget = targetStack.length > 0 ? targetStack[targetStack.length - 1] : null;
+                    const crushingPiece = movingStack[movingStack.length - 1];
+                    if (crushingPiece && crushingPiece.type === PIECE_TYPES.CAPSTONE && topOfTarget && topOfTarget.type === PIECE_TYPES.WALL){
+                        topOfTarget.type = PIECE_TYPES.FLAT;
+                        wallFlattened = true;
+                    }
+                    tempBoard[currR][currC].push(...movingStack);
+                }
+            }
+            
+            const originalBoard = board;
+            board = tempBoard;
+
+            if(checkForWin(PLAYER2)) score += 10000;
+            
+            if(wallFlattened) score += 50;
+            
+            score += calculateRoadPotential(PLAYER2) * 15;
+            score -= calculateRoadPotential(PLAYER1) * 20; 
+            score += calculateControlScore(PLAYER2) * 2;
+
+            board = originalBoard;
+            
+            score += Math.random();
+            return score;
+        }
+
+        function calculateRoadPotential(player) {
+            let maxPotential = 0;
+            // Dikey
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                let colPotential = 0, consecutive = 0;
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    if (isRoadPiece(r, c, player)) consecutive++;
+                    else { colPotential += consecutive * consecutive; consecutive = 0; }
+                }
+                colPotential += consecutive * consecutive;
+                if(colPotential > maxPotential) maxPotential = colPotential;
+            }
+            // Yatay
+             for (let r = 0; r < BOARD_SIZE; r++) {
+                let rowPotential = 0, consecutive = 0;
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (isRoadPiece(r, c, player)) consecutive++;
+                    else { rowPotential += consecutive * consecutive; consecutive = 0; }
+                }
+                rowPotential += consecutive * consecutive;
+                if(rowPotential > maxPotential) maxPotential = rowPotential;
+            }
+            return maxPotential;
+        }
+
+        function calculateControlScore(player) {
+            let score = 0;
+            for(let r=0; r<BOARD_SIZE; r++) {
+                for(let c=0; c<BOARD_SIZE; c++) {
+                    const stack = board[r][c];
+                    if (stack.length > 0) {
+                        const topPiece = stack[stack.length - 1];
+                        if (topPiece.player === player) {
+                            score += stack.length * positionalWeights[r][c];
+                            if(topPiece.type === PIECE_TYPES.CAPSTONE) score += 10;
+                        }
+                    }
+                }
+            }
+            return score;
+        }
+
+        function getAllPossibleMoves(player) {
+            const moves = [];
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (board[r][c].length === 0) {
+                        if (playerStones[player] > 0) {
+                            moves.push({ type: 'place', r, c, pieceType: PIECE_TYPES.FLAT, player });
+                            moves.push({ type: 'place', r, c, pieceType: PIECE_TYPES.WALL, player });
+                        }
+                        if (playerCapstones[player] > 0) {
+                            moves.push({ type: 'place', r, c, pieceType: PIECE_TYPES.CAPSTONE, player });
+                        }
+                    } else {
+                         const stack = board[r][c];
+                         if (stack.length > 0 && stack[stack.length - 1].player === player) {
+                             const numToPickup = Math.min(stack.length, BOARD_SIZE);
+                             [[ -1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dr, dc]) => {
+                                 for(let i=1; i <= numToPickup; i++){
+                                     const newR = r + i * dr, newC = c + i * dc;
+                                     if(newR >= 0 && newR < BOARD_SIZE && newC >=0 && newC < BOARD_SIZE) {
+                                         if(isLegalMove(r, c, newR, newC)){
+                                            const dist = Math.abs(r - newR) + Math.abs(c - newC);
+                                            for (let count = dist; count <= numToPickup; count++) {
+                                                 moves.push({ type: 'move', fromR: r, fromC: c, toR: newR, toC: newC, count, player });
+                                            }
+                                         } else { break; }
+                                     } else { break; }
+                                 }
+                             });
+                         }
+                    }
+                }
+            }
+            return moves;
+        }
+        
+        resetButton.addEventListener('click', initGame);
+        initGame();
+    </script>
+</body>
+</html>
+
