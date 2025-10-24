@@ -671,13 +671,23 @@
                 return;
             }
 
-            let bestMove = null;
-            let bestScore = -Infinity;
-            for (const move of moves) {
-                const score = evaluateMove(move);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMove = move;
+            // Check if player is one move away from winning and prioritize blocking
+            let mustBlockMove = null;
+            const playerWinThreat = checkPlayerWinThreat();
+            if (playerWinThreat) {
+                mustBlockMove = findBlockingMove(moves, playerWinThreat);
+            }
+
+            let bestMove = mustBlockMove;
+            let bestScore = mustBlockMove ? Infinity : -Infinity;
+            
+            if (!mustBlockMove) {
+                for (const move of moves) {
+                    const score = evaluateMove(move);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
                 }
             }
 
@@ -686,6 +696,31 @@
             } else {
                  moveStack(bestMove.fromR, bestMove.fromC, bestMove.toR, bestMove.toC, bestMove.count);
             }
+        }
+        
+        function checkPlayerWinThreat() {
+            // Check if player can win in next move by creating a path
+            const roadPotential = calculateRoadPotential(PLAYER1);
+            return roadPotential > 20; // High potential means close to winning
+        }
+        
+        function findBlockingMove(moves, threat) {
+            // Try to find a move that blocks the player's path
+            for (const move of moves) {
+                if (move.type === 'place' && move.pieceType === PIECE_TYPES.WALL) {
+                    // Walls are good for blocking
+                    const tempBoard = JSON.parse(JSON.stringify(board));
+                    tempBoard[move.r][move.c].push({ player: PLAYER2, type: PIECE_TYPES.WALL });
+                    const originalBoard = board;
+                    board = tempBoard;
+                    const newPotential = calculateRoadPotential(PLAYER1);
+                    board = originalBoard;
+                    if (newPotential < threat) {
+                        return move; // This move reduces player's road potential
+                    }
+                }
+            }
+            return null;
         }
 
         // GÜNCELLEME: Daha akıllı yapay zeka değerlendirmesi
