@@ -17,7 +17,7 @@
             grid-template-rows: repeat(5, 1fr);
             gap: 0;
             aspect-ratio: 1 / 1;
-            padding: clamp(12px, 3vw, 20px);
+            padding: 20px;
             background-color: #c2a26e;
             border: 4px solid #6b4e2a;
             border-radius: 8px;
@@ -27,7 +27,7 @@
         @media (max-width: 640px) {
             .board-grid {
                 padding: 10px;
-                border-width: 3px;
+                border-width: 2px;
             }
         }
         .square {
@@ -37,9 +37,11 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease-in-out;
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
+        }
+        .square:hover {
+            transform: scale(1.02);
         }
         .square::before, .square::after {
             content: '';
@@ -47,14 +49,14 @@
             background-color: #9c7b4f;
             z-index: 1;
         }
-        .square::before {
+        .square::before { /* Dikey çizgi */
             width: 2px;
             left: 50%;
             transform: translateX(-50%);
             top: -50%;
             bottom: -50%;
         }
-        .square::after {
+        .square::after { /* Yatay çizgi */
             height: 2px;
             top: 50%;
             transform: translateY(-50%);
@@ -62,6 +64,7 @@
             right: -50%;
         }
         
+        /* GÜNCELLEME: Kenar bölgeleri */
         .edge-square {
              background-color: rgba(0, 0, 0, 0.05);
         }
@@ -71,22 +74,32 @@
             width: 90%;
             height: 90%;
             border-radius: 50%;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 2;
         }
         .square:hover > .click-target {
-            background-color: rgba(255, 255, 255, 0.25);
-            transform: scale(1.08);
+            background-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
         .square.legal-move > .click-target {
-            background-color: rgba(167, 243, 208, 0.85);
-            transform: scale(1.1);
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+            background-color: rgba(167, 243, 208, 0.9);
+            transform: scale(1.08);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+            animation: pulse-legal 1.5s infinite;
+        }
+        @keyframes pulse-legal {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
         .square.selected > .click-target {
-            background-color: rgba(253, 224, 71, 0.85);
-            transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+            background-color: rgba(253, 224, 71, 0.9);
+            transform: scale(1.08);
+            box-shadow: 0 0 15px #f59e0b;
+            animation: pulse-selected 1s infinite;
+        }
+        @keyframes pulse-selected {
+            0%, 100% { box-shadow: 0 0 15px #f59e0b; }
+            50% { box-shadow: 0 0 25px #f59e0b; }
         }
         
         .stack {
@@ -106,7 +119,11 @@
             border-radius: 50%;
             box-sizing: border-box;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 2px 3px rgba(255,255,255,0.2);
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .piece:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.2);
         }
         .piece.player1 { background-color: #ffffff; border: 2px solid #ccc; }
         .piece.player2 { background-color: #2d3748; border: 2px solid #1a202c; }
@@ -118,7 +135,7 @@
             border-radius: 6px;
             transform: rotate(45deg);
             box-shadow: 0 6px 8px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.3);
-            font-size: clamp(1rem, 2vw, 1.5rem);
+            font-size: 1.5em;
             color: #d4af37;
             display: flex;
             align-items: center;
@@ -133,12 +150,6 @@
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        @media (max-width: 640px) {
-            .piece-count-indicator {
-                width: 24px;
-                height: 24px;
-            }
-        }
         .player1 .piece-count-indicator { background-color: #ffffff; }
         .player2 .piece-count-indicator { background-color: #2d3748; }
 
@@ -148,45 +159,28 @@
         .stack .piece:nth-child(4) { transform: translateY(-15px); }
         .stack .piece:nth-child(5) { transform: translateY(-20px); }
 
+        /* GÜNCELLEME: Kazanma animasyonu */
         .winning-path > .click-target {
             animation: pulse 1.5s infinite ease-in-out;
         }
         @keyframes pulse {
             0% { background-color: rgba(253, 224, 71, 0.8); transform: scale(1.05); }
-            50% { background-color: rgba(250, 204, 21, 1); transform: scale(1.2); box-shadow: 0 0 25px #f59e0b; }
+            50% { background-color: rgba(250, 204, 21, 1); transform: scale(1.15); box-shadow: 0 0 20px #f59e0b; }
             100% { background-color: rgba(253, 224, 71, 0.8); transform: scale(1.05); }
-        }
-        
-        /* AI thinking indicator */
-        .ai-thinking {
-            display: inline-block;
-            animation: thinking 1.5s infinite;
-        }
-        @keyframes thinking {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        /* Button animations */
-        .action-btn {
-            transition: all 0.2s ease-in-out;
-        }
-        .action-btn:active {
-            transform: scale(0.95);
         }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-2xl mx-auto">
-        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-2 text-gray-800 dark:text-white">Tak Oyunu</h1>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-2 text-gray-800 dark:text-white">Tak Oyunu</h1>
         <p class="text-center text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 px-2">Rakibin (Siyah) bir yol yapmasını engelle ve kendi yolunu (Beyaz) oluştur.</p>
 
         <div id="game-status" class="text-center text-lg sm:text-xl font-semibold mb-4 h-8 transition-colors duration-300 px-2"></div>
 
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 px-2">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4 px-2">
             <!-- Oyuncu 1 (Siz) -->
-            <div class="flex flex-col items-center p-3 rounded-lg bg-white dark:bg-gray-800 shadow-md w-full sm:w-auto">
+            <div class="flex flex-col items-center p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-200 w-full sm:w-auto">
                 <h3 class="font-bold text-base sm:text-lg">Siz (Beyaz)</h3>
                 <div class="flex items-center gap-3 sm:gap-4 mt-2">
                     <div class="flex items-center gap-2">
@@ -200,7 +194,7 @@
                 </div>
             </div>
             <!-- Oyuncu 2 (Yapay Zeka) -->
-            <div class="flex flex-col items-center p-3 rounded-lg bg-white dark:bg-gray-800 shadow-md w-full sm:w-auto">
+            <div class="flex flex-col items-center p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-200 w-full sm:w-auto">
                 <h3 class="font-bold text-base sm:text-lg">Yapay Zeka (Siyah)</h3>
                  <div class="flex items-center gap-3 sm:gap-4 mt-2">
                     <div class="flex items-center gap-2">
@@ -217,12 +211,12 @@
 
         <div id="board" class="board-grid w-full max-w-lg mx-auto mb-4"></div>
 
-        <div id="action-panel" class="text-center mb-4 min-h-[3rem] flex flex-wrap justify-center items-center gap-2 px-2">
+        <div id="action-panel" class="text-center mb-4 min-h-[3rem] flex flex-wrap justify-center items-center gap-2">
             <!-- Yerleştirme butonları dinamik olarak buraya eklenecek -->
         </div>
 
         <div class="flex justify-center">
-            <button id="reset-button" class="w-full max-w-md bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 active:scale-95">
+            <button id="reset-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 hover:shadow-xl">
                 Yeni Oyun Başlat
             </button>
         </div>
@@ -236,15 +230,13 @@
         const PIECE_TYPES = { FLAT: 'flat', WALL: 'wall', CAPSTONE: 'capstone' };
         const INITIAL_STONES = 21;
         const INITIAL_CAPSTONES = 1;
-        const AI_DEPTH = 2; // Daha derin arama için artırılabilir
-        
-        // Pozisyon ağırlıkları - merkez ve stratejik noktalar daha değerli
+        // GÜNCELLEME: Yapay zeka için pozisyon ağırlıkları
         const positionalWeights = [
-            [3, 3, 4, 3, 3],
-            [3, 5, 6, 5, 3],
-            [4, 6, 8, 6, 4],
-            [3, 5, 6, 5, 3],
-            [3, 3, 4, 3, 3]
+            [1, 2, 2, 2, 1],
+            [2, 3, 4, 3, 2],
+            [2, 4, 5, 4, 2],
+            [2, 3, 4, 3, 2],
+            [1, 2, 2, 2, 1]
         ];
 
         // Oyun durumu değişkenleri
@@ -304,6 +296,7 @@
                     square.dataset.r = r;
                     square.dataset.c = c;
                     
+                    // GÜNCELLEME: Kenar bölgeleri için sınıf ekleme
                     if (r === 0 || r === BOARD_SIZE - 1 || c === 0 || c === BOARD_SIZE - 1) {
                         square.classList.add('edge-square');
                     }
@@ -347,13 +340,7 @@
 
         function updateStatus() {
             if (gameOver) return;
-            if (currentPlayer === PLAYER1) {
-                statusElement.textContent = "Sıra Sizde (Beyaz)";
-                statusElement.className = "text-center text-lg sm:text-xl font-semibold mb-4 h-8 transition-colors duration-300 px-2";
-            } else {
-                statusElement.innerHTML = '<span class="ai-thinking">Yapay Zeka (Siyah) Düşünüyor...</span>';
-                statusElement.className = "text-center text-lg sm:text-xl font-semibold mb-4 h-8 transition-colors duration-300 px-2 text-blue-600 dark:text-blue-400";
-            }
+            statusElement.textContent = currentPlayer === PLAYER1 ? "Sıra Sizde (Beyaz)" : "Yapay Zeka (Siyah) Düşünüyor...";
         }
 
         function handleSquareClick(r, c) {
@@ -365,6 +352,7 @@
                     turnCount++;
                     currentPlayer = PLAYER2;
                     updateUI();
+                    statusElement.textContent = "Yapay Zeka kendi başlangıç taşınızı yerleştiriyor...";
                     setTimeout(makeAIInitialPlacement, 1000);
                 } else {
                     statusElement.textContent = "Boş bir kareye yerleştirin.";
@@ -401,29 +389,29 @@
 
             if(canPlaceStone) {
                 const flatBtn = document.createElement('button');
-                flatBtn.textContent = 'Düz Taş';
-                flatBtn.className = "action-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition text-sm sm:text-base";
+                flatBtn.textContent = 'Düz Taş Yerleştir';
+                flatBtn.className = "bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base";
                 flatBtn.onclick = () => placePiece(r, c, PIECE_TYPES.FLAT);
                 actionPanelElement.appendChild(flatBtn);
 
                 const wallBtn = document.createElement('button');
-                wallBtn.textContent = 'Duvar';
-                wallBtn.className = "action-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition text-sm sm:text-base";
+                wallBtn.textContent = 'Duvar Yerleştir';
+                wallBtn.className = "bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base";
                 wallBtn.onclick = () => placePiece(r, c, PIECE_TYPES.WALL);
                 actionPanelElement.appendChild(wallBtn);
             }
 
             if (canPlaceCapstone) {
                  const capstoneBtn = document.createElement('button');
-                capstoneBtn.textContent = 'Ana Taş';
-                capstoneBtn.className = "action-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition text-sm sm:text-base";
+                capstoneBtn.textContent = 'Ana Taş Yerleştir';
+                capstoneBtn.className = "bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base";
                 capstoneBtn.onclick = () => placePiece(r, c, PIECE_TYPES.CAPSTONE);
                 actionPanelElement.appendChild(capstoneBtn);
             }
 
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'İptal';
-            cancelBtn.className = "action-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition text-sm sm:text-base";
+            cancelBtn.className = "bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base";
             cancelBtn.onclick = () => hideActionPanel();
             actionPanelElement.appendChild(cancelBtn);
         }
@@ -437,15 +425,15 @@
 
             for (let i = dist; i <= numToPickup; i++) {
                 const moveBtn = document.createElement('button');
-                moveBtn.textContent = `${i} taş`;
-                moveBtn.className = "action-btn bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition text-sm sm:text-base";
+                moveBtn.textContent = `${i} taş taşı`;
+                moveBtn.className = "bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base";
                 moveBtn.onclick = () => moveStack(fromR, fromC, toR, toC, i);
                 actionPanelElement.appendChild(moveBtn);
             }
             
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'İptal';
-            cancelBtn.className = "action-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition text-sm sm:text-base";
+            cancelBtn.className = "bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg active:scale-95 text-sm sm:text-base";
             cancelBtn.onclick = () => {
                 hideActionPanel();
                 clearHighlights();
@@ -502,6 +490,7 @@
             endTurn();
         }
         
+        // GÜNCELLEME: Kazanma anı görselleştirmesi için düzenlendi
         function endTurn() {
             turnCount++;
             clearHighlights();
@@ -510,7 +499,7 @@
             
             const winningPath = checkForWin(currentPlayer);
             
-            updateUI();
+            updateUI(); // Hamleyi önce göster
 
             if (winningPath) {
                 handleWin(currentPlayer, "Yol yaparak", winningPath);
@@ -526,7 +515,7 @@
             updateStatus();
 
             if (currentPlayer === PLAYER2 && !gameOver) {
-                setTimeout(makeAIMove, 800);
+                setTimeout(makeAIMove, 500);
             }
         }
         
@@ -572,7 +561,7 @@
                     const newC = c + i * dc;
                     if (newR >= 0 && newR < BOARD_SIZE && newC >= 0 && newC < BOARD_SIZE) {
                          if (isLegalMove(r, c, newR, newC)) {
-                             document.querySelector(`[data-r='${newR}')[data-c='${newC}']`).classList.add('legal-move');
+                             document.querySelector(`[data-r='${newR}'][data-c='${newC}']`).classList.add('legal-move');
                          } else { break; }
                     } else { break; }
                 }
@@ -585,6 +574,7 @@
             });
         }
 
+        // GÜNCELLEME: Kazanma yolu için düzenlendi
         function checkForWin(player) {
             const visited = new Set();
             let path = [];
@@ -622,7 +612,7 @@
                     if(dfs(nr, nc, player, direction, visited, path)) return true;
                 }
             }
-            path.pop();
+            path.pop(); // Backtrack
             return false;
         }
 
@@ -653,6 +643,7 @@
             else handleWin(0, "Berabere!");
         }
 
+        // GÜNCELLEME: Kazanma yolu parametresi eklendi
         function handleWin(player, reason = "Yol yaparak", winningPath = null) {
             gameOver = true;
             hideActionPanel();
@@ -665,16 +656,9 @@
 
             setTimeout(() => {
                 let winnerText;
-                if (player === PLAYER1) {
-                    winnerText = `🎉 Tebrikler, Kazandınız!`;
-                    statusElement.className = "text-center text-lg sm:text-xl font-semibold mb-4 h-8 transition-colors duration-300 px-2 text-green-600 dark:text-green-400";
-                } else if (player === PLAYER2) {
-                    winnerText = `🤖 Yapay Zeka Kazandı!`;
-                    statusElement.className = "text-center text-lg sm:text-xl font-semibold mb-4 h-8 transition-colors duration-300 px-2 text-red-600 dark:text-red-400";
-                } else {
-                    winnerText = "🤝 Oyun Bitti!";
-                    statusElement.className = "text-center text-lg sm:text-xl font-semibold mb-4 h-8 transition-colors duration-300 px-2 text-yellow-600 dark:text-yellow-400";
-                }
+                if (player === PLAYER1) winnerText = `Tebrikler, Kazandınız!`;
+                else if (player === PLAYER2) winnerText = `Yapay Zeka Kazandı!`;
+                else winnerText = "Oyun Bitti!";
                 statusElement.textContent = `${winnerText} (${reason})`;
             }, winningPath ? 1500 : 100);
         }
@@ -689,24 +673,11 @@
 
             let bestMove = null;
             let bestScore = -Infinity;
-            
-            // Önce kazanan hamleyi kontrol et
             for (const move of moves) {
-                const score = evaluateMoveQuick(move);
-                if (score >= 10000) {
+                const score = evaluateMove(move);
+                if (score > bestScore) {
+                    bestScore = score;
                     bestMove = move;
-                    break;
-                }
-            }
-            
-            // Kazanan hamle yoksa, tüm hamleleri değerlendir
-            if (!bestMove) {
-                for (const move of moves) {
-                    const score = evaluateMove(move);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMove = move;
-                    }
                 }
             }
 
@@ -717,87 +688,15 @@
             }
         }
 
-        // Hızlı değerlendirme - sadece kazanma kontrolü
-        function evaluateMoveQuick(move) {
-            const tempBoard = JSON.parse(JSON.stringify(board));
-            const tempStones = {...playerStones};
-            const tempCapstones = {...playerCapstones};
-            
-            applyMove(tempBoard, tempStones, tempCapstones, move);
-            
-            const originalBoard = board;
-            const originalStones = playerStones;
-            const originalCapstones = playerCapstones;
-            
-            board = tempBoard;
-            playerStones = tempStones;
-            playerCapstones = tempCapstones;
-            
-            const score = checkForWin(PLAYER2) ? 10000 : 0;
-            
-            board = originalBoard;
-            playerStones = originalStones;
-            playerCapstones = originalCapstones;
-            
-            return score;
-        }
-
-        // Geliştirilmiş değerlendirme fonksiyonu
+        // GÜNCELLEME: Daha akıllı yapay zeka değerlendirmesi
         function evaluateMove(move) {
             let score = 0;
             const tempBoard = JSON.parse(JSON.stringify(board));
-            const tempStones = {...playerStones};
-            const tempCapstones = {...playerCapstones};
             
-            const wallFlattened = applyMove(tempBoard, tempStones, tempCapstones, move);
-            
-            const originalBoard = board;
-            const originalStones = playerStones;
-            const originalCapstones = playerCapstones;
-            
-            board = tempBoard;
-            playerStones = tempStones;
-            playerCapstones = tempCapstones;
-
-            // Kazanma durumu
-            if(checkForWin(PLAYER2)) score += 10000;
-            
-            // Rakibin kazanmasını engelleme
-            if(checkForWin(PLAYER1)) score -= 9000;
-            
-            // Duvar ezme bonusu
-            if(wallFlattened) score += 80;
-            
-            // Yol potansiyeli
-            score += calculateRoadPotential(PLAYER2) * 25;
-            score -= calculateRoadPotential(PLAYER1) * 30;
-            
-            // Kontrol skoru
-            score += calculateControlScore(PLAYER2) * 3;
-            score -= calculateControlScore(PLAYER1) * 2;
-            
-            // Bağlantı bonusu
-            score += calculateConnectivity(PLAYER2) * 15;
-            score -= calculateConnectivity(PLAYER1) * 18;
-
-            board = originalBoard;
-            playerStones = originalStones;
-            playerCapstones = originalCapstones;
-            
-            score += Math.random() * 0.5;
-            return score;
-        }
-        
-        function applyMove(tempBoard, tempStones, tempCapstones, move) {
             let wallFlattened = false;
-            
+
             if (move.type === 'place') {
-                tempBoard[move.r][move.c].push({ player: move.player, type: move.pieceType });
-                if (move.pieceType === PIECE_TYPES.CAPSTONE) {
-                    tempCapstones[move.player]--;
-                } else {
-                    tempStones[move.player]--;
-                }
+                 tempBoard[move.r][move.c].push({ player: move.player, type: move.pieceType });
             } else if (move.type === 'move') {
                 const movingStack = tempBoard[move.fromR][move.fromC].splice(tempBoard[move.fromR][move.fromC].length - move.count);
                 const dirR = Math.sign(move.toR - move.fromR), dirC = Math.sign(move.toC - move.fromC);
@@ -823,22 +722,55 @@
                 }
             }
             
-            return wallFlattened;
+            const originalBoard = board;
+            board = tempBoard;
+
+            // Çok yüksek öncelik: Kazanma hamlesi
+            if(checkForWin(PLAYER2)) score += 100000;
+            
+            // Yüksek öncelik: Rakibin kazanmasını engelleme
+            if(checkForWin(PLAYER1)) score -= 50000;
+            
+            // Duvar ezme bonusu
+            if(wallFlattened) score += 80;
+            
+            // Yol potansiyeli (kendimiz için pozitif, rakip için negatif)
+            score += calculateRoadPotential(PLAYER2) * 20;
+            score -= calculateRoadPotential(PLAYER1) * 25; 
+            
+            // Kontrol puanı
+            score += calculateControlScore(PLAYER2) * 3;
+            score -= calculateControlScore(PLAYER1) * 2;
+            
+            // Merkez kontrolü bonusu
+            if(move.type === 'place' && move.r >= 1 && move.r <= 3 && move.c >= 1 && move.c <= 3) {
+                score += 15;
+            }
+
+            board = originalBoard;
+            
+            // Rastgelelik ekleyerek deterministik olmayan oyun
+            score += Math.random() * 5;
+            return score;
         }
 
         function calculateRoadPotential(player) {
             let maxPotential = 0;
             
+            // Cache isRoadPiece results for better performance
+            const roadPieceCache = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(false));
+            for(let r=0; r<BOARD_SIZE; r++) {
+                for(let c=0; c<BOARD_SIZE; c++) {
+                    roadPieceCache[r][c] = isRoadPiece(r, c, player);
+                }
+            }
+            
             // Dikey
             for (let c = 0; c < BOARD_SIZE; c++) {
                 let colPotential = 0, consecutive = 0;
                 for (let r = 0; r < BOARD_SIZE; r++) {
-                    if (isRoadPiece(r, c, player)) {
-                        consecutive++;
-                    } else {
-                        colPotential += consecutive * consecutive;
-                        consecutive = 0;
-                    }
+                    if (roadPieceCache[r][c]) consecutive++;
+                    else { colPotential += consecutive * consecutive; consecutive = 0; }
                 }
                 colPotential += consecutive * consecutive;
                 if(colPotential > maxPotential) maxPotential = colPotential;
@@ -848,17 +780,12 @@
             for (let r = 0; r < BOARD_SIZE; r++) {
                 let rowPotential = 0, consecutive = 0;
                 for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (isRoadPiece(r, c, player)) {
-                        consecutive++;
-                    } else {
-                        rowPotential += consecutive * consecutive;
-                        consecutive = 0;
-                    }
+                    if (roadPieceCache[r][c]) consecutive++;
+                    else { rowPotential += consecutive * consecutive; consecutive = 0; }
                 }
                 rowPotential += consecutive * consecutive;
                 if(rowPotential > maxPotential) maxPotential = rowPotential;
             }
-            
             return maxPotential;
         }
 
@@ -871,30 +798,12 @@
                         const topPiece = stack[stack.length - 1];
                         if (topPiece.player === player) {
                             score += stack.length * positionalWeights[r][c];
-                            if(topPiece.type === PIECE_TYPES.CAPSTONE) score += 15;
-                            if(topPiece.type === PIECE_TYPES.WALL) score += 8;
+                            if(topPiece.type === PIECE_TYPES.CAPSTONE) score += 10;
                         }
                     }
                 }
             }
             return score;
-        }
-        
-        function calculateConnectivity(player) {
-            let connectivity = 0;
-            for(let r=0; r<BOARD_SIZE; r++) {
-                for(let c=0; c<BOARD_SIZE; c++) {
-                    if(isRoadPiece(r, c, player)) {
-                        const neighbors = [[r-1,c], [r+1,c], [r,c-1], [r,c+1]];
-                        neighbors.forEach(([nr, nc]) => {
-                            if(nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-                                if(isRoadPiece(nr, nc, player)) connectivity++;
-                            }
-                        });
-                    }
-                }
-            }
-            return connectivity;
         }
 
         function getAllPossibleMoves(player) {
@@ -913,7 +822,7 @@
                          const stack = board[r][c];
                          if (stack.length > 0 && stack[stack.length - 1].player === player) {
                              const numToPickup = Math.min(stack.length, BOARD_SIZE);
-                             [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dr, dc]) => {
+                             [[ -1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dr, dc]) => {
                                  for(let i=1; i <= numToPickup; i++){
                                      const newR = r + i * dr, newC = c + i * dc;
                                      if(newR >= 0 && newR < BOARD_SIZE && newC >=0 && newC < BOARD_SIZE) {
