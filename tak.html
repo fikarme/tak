@@ -230,6 +230,8 @@
         const PIECE_TYPES = { FLAT: 'flat', WALL: 'wall', CAPSTONE: 'capstone' };
         const INITIAL_STONES = 21;
         const INITIAL_CAPSTONES = 1;
+        const DIRECTIONS = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // Cached directions for reuse
+        const WIN_THREAT_THRESHOLD = 20; // Threshold for detecting player win threat
         // GÜNCELLEME: Yapay zeka için pozisyon ağırlıkları
         const positionalWeights = [
             [1, 2, 2, 2, 1],
@@ -554,8 +556,7 @@
             if (!stack || stack.length === 0) return;
 
             const numToPickup = Math.min(stack.length, handLimit);
-            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-            directions.forEach(([dr, dc]) => {
+            DIRECTIONS.forEach(([dr, dc]) => {
                 for (let i = 1; i <= numToPickup; i++) {
                     const newR = r + i * dr;
                     const newC = c + i * dc;
@@ -671,13 +672,23 @@
                 return;
             }
 
-            let bestMove = null;
-            let bestScore = -Infinity;
-            for (const move of moves) {
-                const score = evaluateMove(move);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMove = move;
+            // Check if player is one move away from winning and prioritize blocking
+            let mustBlockMove = null;
+            const playerWinThreat = checkPlayerWinThreat();
+            if (playerWinThreat) {
+                mustBlockMove = findBlockingMove(moves, playerWinThreat);
+            }
+
+            let bestMove = mustBlockMove;
+            let bestScore = mustBlockMove ? Infinity : -Infinity;
+            
+            if (!mustBlockMove) {
+                for (const move of moves) {
+                    const score = evaluateMove(move);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
                 }
             }
 
@@ -686,6 +697,31 @@
             } else {
                  moveStack(bestMove.fromR, bestMove.fromC, bestMove.toR, bestMove.toC, bestMove.count);
             }
+        }
+        
+        function checkPlayerWinThreat() {
+            // Check if player can win in next move by creating a path
+            const roadPotential = calculateRoadPotential(PLAYER1);
+            return roadPotential > WIN_THREAT_THRESHOLD ? roadPotential : 0;
+        }
+        
+        function findBlockingMove(moves, currentThreat) {
+            // Try to find a move that blocks the player's path
+            for (const move of moves) {
+                if (move.type === 'place' && move.pieceType === PIECE_TYPES.WALL) {
+                    // Walls are good for blocking
+                    const tempBoard = JSON.parse(JSON.stringify(board));
+                    tempBoard[move.r][move.c].push({ player: PLAYER2, type: PIECE_TYPES.WALL });
+                    const originalBoard = board;
+                    board = tempBoard;
+                    const newPotential = calculateRoadPotential(PLAYER1);
+                    board = originalBoard;
+                    if (newPotential < currentThreat) {
+                        return move; // This move reduces player's road potential
+                    }
+                }
+            }
+            return null;
         }
 
         // GÜNCELLEME: Daha akıllı yapay zeka değerlendirmesi
@@ -822,7 +858,7 @@
                          const stack = board[r][c];
                          if (stack.length > 0 && stack[stack.length - 1].player === player) {
                              const numToPickup = Math.min(stack.length, BOARD_SIZE);
-                             [[ -1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dr, dc]) => {
+                             DIRECTIONS.forEach(([dr, dc]) => {
                                  for(let i=1; i <= numToPickup; i++){
                                      const newR = r + i * dr, newC = c + i * dc;
                                      if(newR >= 0 && newR < BOARD_SIZE && newC >=0 && newC < BOARD_SIZE) {
